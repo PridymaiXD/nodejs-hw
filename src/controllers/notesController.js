@@ -56,10 +56,11 @@ export const deleteNote = async (req, res, next) => {
 // PATCH /notes/:noteId
 export const updateNote = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { noteId } = req.params;
 
     const updatedNote = await Note.findByIdAndUpdate(
-      id, 
+      noteId, 
+
       req.body, 
       { returnDocument: 'after' }
     );
