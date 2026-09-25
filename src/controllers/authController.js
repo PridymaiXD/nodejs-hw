@@ -1,21 +1,8 @@
 import createHttpError from 'http-errors';
 import bcrypt from 'bcrypt';
-import crypto from 'node:crypto';
 import { User } from '../models/user.js';
 import { Session } from '../models/session.js';
-
-const createSessionData = (userId) => {
-  const accessToken = crypto.randomBytes(30).toString('base64');
-  const refreshToken = crypto.randomBytes(30).toString('base64');
-
-  return {
-    userId,
-    accessToken,
-    refreshToken,
-    accessTokenValidUntil: new Date(Date.now() + 15 * 60 * 1000), // 15 мин
-    refreshTokenValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 дней
-  };
-};
+import { createSession, setSessionCookies } from '../services/auth.js';
 
 export const registerUser = async (req, res, next) => {
   try {
@@ -23,7 +10,7 @@ export const registerUser = async (req, res, next) => {
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return next(createHttpError(409, 'Email in use'));
+      return next(createHttpError(400, 'Email in use'));
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -34,14 +21,13 @@ export const registerUser = async (req, res, next) => {
       password: hashedPassword,
     });
 
+    const session = await createSession(user._id);
+    setSessionCookies(res, session);
+
     const userObj = user.toObject();
     delete userObj.password;
 
-    res.status(201).json({
-      status: 201,
-      message: 'Successfully registered a user!',
-      data: userObj,
-    });
+    res.status(201).json(userObj);
   } catch (error) {
     next(error);
   }
@@ -63,24 +49,13 @@ export const loginUser = async (req, res, next) => {
 
     await Session.deleteOne({ userId: user._id });
 
-    const session = await Session.create(createSessionData(user._id));
+    const session = await createSession(user._id);
+    setSessionCookies(res, session);
 
-    res.cookie('refreshToken', session.refreshToken, {
-      httpOnly: true,
-      expires: session.refreshTokenValidUntil,
-    });
-    res.cookie('sessionId', session._id, {
-      httpOnly: true,
-      expires: session.refreshTokenValidUntil,
-    });
+    const userObj = user.toObject();
+    delete userObj.password;
 
-    res.status(200).json({
-      status: 200,
-      message: 'Successfully logged in an user!',
-      data: {
-        accessToken: session.accessToken,
-      },
-    });
+    res.status(200).json(userObj);
   } catch (error) {
     next(error);
   }
@@ -96,6 +71,7 @@ export const logoutUser = async (req, res, next) => {
 
     res.clearCookie('sessionId');
     res.clearCookie('refreshToken');
+    res.clearCookie('accessToken');
 
     res.status(204).send();
   } catch (error) {
@@ -124,22 +100,15 @@ export const refreshUserSession = async (req, res, next) => {
 
       res.clearCookie('sessionId');
       res.clearCookie('refreshToken');
+      res.clearCookie('accessToken');
 
       return next(createHttpError(401, 'Refresh token expired'));
     }
 
     await Session.deleteOne({ _id: sessionId });
 
-    const newSession = await Session.create(createSessionData(session.userId));
-
-    res.cookie('refreshToken', newSession.refreshToken, {
-      httpOnly: true,
-      expires: newSession.refreshTokenValidUntil,
-    });
-    res.cookie('sessionId', newSession._id, {
-      httpOnly: true,
-      expires: newSession.refreshTokenValidUntil,
-    });
+    const newSession = await createSession(session.userId);
+    setSessionCookies(res, newSession);
 
     res.status(200).json({
       status: 200,
