@@ -1,43 +1,39 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import cookieParser from 'cookie-parser';
-import { errors } from 'celebrate';
+import crypto from 'node:crypto';
+import { Session } from '../models/session.js';
+import { FIFTEEN_MINUTES, ONE_DAY } from '../constants/time.js';
 
-import { logger } from './middleware/logger.js';
-import { notFoundHandler } from './middleware/notFoundHandler.js';
-import { errorHandler } from './middleware/errorHandler.js';
-import { authenticate } from './middleware/authenticate.js';
+export const createSession = async (userId) => {
+  const accessToken = crypto.randomBytes(30).toString('base64');
+  const refreshToken = crypto.randomBytes(30).toString('base64');
 
-import authRoutes from './routes/authRoutes.js';
-import noteRoutes from './routes/noteRoutes.js';
+  return await Session.create({
+    userId,
+    accessToken,
+    refreshToken,
+    accessTokenValidUntil: new Date(Date.now() + FIFTEEN_MINUTES),
+    refreshTokenValidUntil: new Date(Date.now() + ONE_DAY),
+  });
+};
 
-dotenv.config();
+export const setSessionCookies = (res, session) => {
+  const cookieOptions = {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+  };
 
-const PORT = process.env.PORT || 3000;
+  res.cookie('accessToken', session.accessToken, {
+    ...cookieOptions,
+    maxAge: FIFTEEN_MINUTES,
+  });
 
-export const startServer = async () => {
-  try {
-    await connectMongoDB();
+  res.cookie('refreshToken', session.refreshToken, {
+    ...cookieOptions,
+    maxAge: ONE_DAY,
+  });
 
-    const app = express();
-
-    app.use(logger);
-    app.use(cors());
-    app.use(express.json());
-    app.use(cookieParser());
-
-    app.use('/auth', authRoutes);
-    app.use('/notes', authenticate, noteRoutes);
-
-    app.use(notFoundHandler);
-    app.use(errors());
-    app.use(errorHandler);
-
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });
-  } catch (error) {
-    console.error(error);
-  }
+  res.cookie('sessionId', session._id, {
+    ...cookieOptions,
+    maxAge: ONE_DAY,
+  });
 };
