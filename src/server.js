@@ -13,9 +13,6 @@ import authRoutes from './routes/authRoutes.js';
 import noteRoutes from './routes/notesRoutes.js';
 import { authenticate } from './middleware/authenticate.js';
 
-app.use(cookieParser());
-app.use('/auth', authRoutes);
-app.use('/notes', authenticate, noteRoutes); 
 dotenv.config();
 
 const PORT = process.env.PORT || 3000;
@@ -29,7 +26,9 @@ export const startServer = async () => {
     app.use(logger);
     app.use(cors());
     app.use(express.json());
-
+    app.use(cookieParser());
+    app.use('/auth', authRoutes);
+    app.use('/notes', authenticate, noteRoutes); 
     app.use(notesRouter);
 
     app.use(notFoundHandler);
