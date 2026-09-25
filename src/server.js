@@ -10,7 +10,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import notesRouter from './routes/notesRoutes.js';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/authRoutes.js';
-import noteRoutes from './routes/noteRoutes.js';
+import noteRoutes from './routes/notesRoutes.js';
 import { authenticate } from './middleware/authenticate.js';
 
 app.use(cookieParser());
