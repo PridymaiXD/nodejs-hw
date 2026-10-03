@@ -41,7 +41,7 @@ router.post(
   resetPassword
 );
 
-router.post('/refresh', refreshUserSession);
-router.post('/logout', logoutUser);
+router.post('/auth/refresh', refreshUserSession);
+router.post('/auth/logout', logoutUser);
 
 export default router;
