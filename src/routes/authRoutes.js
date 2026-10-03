@@ -9,6 +9,8 @@ import {
   resetPassword,
 } from '../controllers/authController.js';
 import {
+  requestResetEmailSchema,
+  resetPasswordSchema,
   registerUserSchema,
   loginUserSchema,
 } from '../validations/authValidation.js';
