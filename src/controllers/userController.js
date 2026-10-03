@@ -16,7 +16,7 @@ export const updateUserAvatar = async (req, res, next) => {
     const user = await User.findByIdAndUpdate(
       req.user._id,
       { avatar: cloudinaryResult.secure_url },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     res.status(200).json({

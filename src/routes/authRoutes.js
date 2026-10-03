@@ -18,13 +18,13 @@ import {
 const router = Router();
 
 router.post(
-  '/register',
+  '/auth/register',
   celebrate({ body: registerUserSchema }),
   registerUser,
 );
 
 router.post(
-  '/login',
+  '/auth/login',
   celebrate({ body: loginUserSchema }),
   loginUser,
 );
